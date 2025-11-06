@@ -3,6 +3,10 @@
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
+import Lottie from 'lottie-react'
+import bookAnimation from '../../public/bookat2.json'
+import documentAnimation from '../../public/Document.json'
+import videoAnimation from '../../public/video.json'
 
 export default function InicioPage() {
   const [isAgendeHovered, setIsAgendeHovered] = useState(false)
@@ -22,7 +26,60 @@ export default function InicioPage() {
   const [mousePosition, setMousePosition] = useState({ x: 50, y: 50 })
   const [smoothPosition, setSmoothPosition] = useState({ x: 50, y: 50 })
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [typewriterText, setTypewriterText] = useState('')
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0)
+  const [isTyping, setIsTyping] = useState(true)
+  const [hoveredRecurso, setHoveredRecurso] = useState<string | null>(null)
+  const [openRecurso, setOpenRecurso] = useState<string | null>(null)
+  const [formData, setFormData] = useState({
+    nome: '',
+    email: '',
+    telefone: '',
+    tipoConsulta: '',
+    mensagem: ''
+  })
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isEnviarHovered, setIsEnviarHovered] = useState(false)
+  const [statsCounters, setStatsCounters] = useState({
+    mulheres: 0,
+    melhoria: 0,
+    profissionais: 0,
+    satisfacao: 0
+  })
+  const [statsVisible, setStatsVisible] = useState(false)
+  const [hoveredStat, setHoveredStat] = useState<string | null>(null)
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set())
+  const statsRef = useRef<HTMLElement>(null)
   const footerRef = useRef<HTMLElement>(null)
+  const typewriterRef = useRef<HTMLDivElement>(null)
+  const sobreRef = useRef<HTMLElement>(null)
+  const areasRef = useRef<HTMLElement>(null)
+  const formacoesRef = useRef<HTMLElement>(null)
+  const recursosRef = useRef<HTMLElement>(null)
+  const faqRef = useRef<HTMLElement>(null)
+  const contatoRef = useRef<HTMLElement>(null)
+  const ebookButtonRef = useRef<HTMLDivElement>(null)
+  const artigosButtonRef = useRef<HTMLDivElement>(null)
+  const videosButtonRef = useRef<HTMLDivElement>(null)
+  const mulherCardRef = useRef<HTMLDivElement>(null)
+  const parentalCardRef = useRef<HTMLDivElement>(null)
+  const perinatalCardRef = useRef<HTMLDivElement>(null)
+  const sexhumanCardRef = useRef<HTMLDivElement>(null)
+
+  const formatarTelefonePortugal = (value: string) => {
+    const numbers = value.replace(/\D/g, '')
+    if (numbers.length === 0) return ''
+    if (numbers.startsWith('351')) {
+      const withoutCountry = numbers.slice(3)
+      if (withoutCountry.length <= 3) return `+351 ${withoutCountry}`
+      if (withoutCountry.length <= 6) return `+351 ${withoutCountry.slice(0, 3)} ${withoutCountry.slice(3)}`
+      return `+351 ${withoutCountry.slice(0, 3)} ${withoutCountry.slice(3, 6)} ${withoutCountry.slice(6, 9)}`
+    }
+    if (numbers.length <= 3) return `+351 ${numbers}`
+    if (numbers.length <= 6) return `+351 ${numbers.slice(0, 3)} ${numbers.slice(3)}`
+    return `+351 ${numbers.slice(0, 3)} ${numbers.slice(3, 6)} ${numbers.slice(6, 9)}`
+  }
 
   const slides = [
     { id: 0, color: '#70309e', label: 'Roxo' },
@@ -59,14 +116,54 @@ export default function InicioPage() {
   })
   const faixaParallaxY = useTransform(faixaScrollYProgress, [0, 1], ['-30%', '30%'])
 
+  // Ref e scroll para efeito parallax da barra roxa
+  const typewriterBarRef = useRef<HTMLDivElement>(null)
+  const { scrollYProgress: typewriterScrollYProgress } = useScroll({
+    target: typewriterBarRef,
+    offset: ['start end', 'end start']
+  })
+  const typewriterParallaxY = useTransform(typewriterScrollYProgress, [0, 1], ['-30%', '30%'])
+
   const menuItems = [
     'Início',
     'Sobre',
     'Áreas de Atuação',
     'Serviços',
-    'Blog',
     'Contato'
   ]
+
+  const scrollToSection = (sectionName: string) => {
+    const sectionMap: Record<string, string> = {
+      'Início': '',
+      'Sobre': 'Sobre',
+      'Áreas de Atuação': 'Áreas de Especialização',
+      'Serviços': 'Formações e Cursos Profissionais',
+      'Contato': 'Contato'
+    }
+
+    const sectionId = sectionMap[sectionName]
+    
+    if (sectionId === '') {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      })
+    } else {
+      const element = document.getElementById(sectionId)
+      if (element) {
+        const offset = 80
+        const elementPosition = element.getBoundingClientRect().top
+        const offsetPosition = elementPosition + window.pageYOffset - offset
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        })
+      }
+    }
+    
+    setActiveSection(sectionName)
+  }
 
   // Função para scroll suave ao topo
   const scrollToTop = () => {
@@ -161,6 +258,230 @@ export default function InicioPage() {
     }
   }, [mousePosition])
 
+  // Frases para o typewriter
+  const phrases = [
+    'Diagnóstico: Ser Humano.',
+    'Tá Tudo Bem não Estar Bem.',
+    'Cuidar da Mente é Revolucionário.'
+  ]
+
+  // Efeito typewriter
+  useEffect(() => {
+    const currentPhrase = phrases[currentPhraseIndex]
+    
+    if (isTyping) {
+      // Escrevendo
+      if (typewriterText.length < currentPhrase.length) {
+        const timeout = setTimeout(() => {
+          setTypewriterText(currentPhrase.slice(0, typewriterText.length + 1))
+        }, 100)
+        return () => clearTimeout(timeout)
+      } else {
+        // Pausa antes de apagar (após terminar de escrever)
+        const pauseTimeout = setTimeout(() => {
+          setIsTyping(false)
+        }, 3000)
+        return () => clearTimeout(pauseTimeout)
+      }
+    } else {
+      // Apagando
+      if (typewriterText.length > 0) {
+        const timeout = setTimeout(() => {
+          setTypewriterText(typewriterText.slice(0, -1))
+        }, 50)
+        return () => clearTimeout(timeout)
+      } else {
+        // Pausa antes de passar para próxima frase
+        const pauseTimeout = setTimeout(() => {
+          setCurrentPhraseIndex((prev) => (prev + 1) % phrases.length)
+          setIsTyping(true)
+        }, 500)
+        return () => clearTimeout(pauseTimeout)
+      }
+    }
+  }, [typewriterText, isTyping, currentPhraseIndex, phrases])
+
+  // Iniciar typewriter ao montar
+  useEffect(() => {
+    if (typewriterText === '' && isTyping && phrases.length > 0) {
+      setTypewriterText(phrases[0][0])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !statsVisible) {
+            setStatsVisible(true)
+          }
+        })
+      },
+      { threshold: 0.3 }
+    )
+
+    if (statsRef.current) {
+      observer.observe(statsRef.current)
+    }
+
+    return () => {
+      if (statsRef.current) {
+        observer.unobserve(statsRef.current)
+      }
+    }
+  }, [statsVisible])
+
+  useEffect(() => {
+    if (!statsVisible) return
+
+    const duration = 2000
+    const steps = 60
+    const interval = duration / steps
+
+    const targets = {
+      mulheres: 500,
+      melhoria: 85,
+      profissionais: 50,
+      satisfacao: 90
+    }
+
+    const timers: NodeJS.Timeout[] = []
+    let currentStep = 0
+
+    const animate = () => {
+      if (currentStep >= steps) return
+
+      const progress = currentStep / steps
+      const easeOutCubic = 1 - Math.pow(1 - progress, 3)
+
+      setStatsCounters({
+        mulheres: Math.floor(targets.mulheres * easeOutCubic),
+        melhoria: Math.floor(targets.melhoria * easeOutCubic),
+        profissionais: Math.floor(targets.profissionais * easeOutCubic),
+        satisfacao: Math.floor(targets.satisfacao * easeOutCubic)
+      })
+
+      currentStep++
+      const timer = setTimeout(animate, interval)
+      timers.push(timer)
+    }
+
+    animate()
+
+    return () => {
+      timers.forEach(timer => clearTimeout(timer))
+    }
+  }, [statsVisible])
+
+  useEffect(() => {
+    const sections = [
+      { ref: sobreRef, id: 'Sobre' },
+      { ref: areasRef, id: 'Áreas de Especialização' },
+      { ref: formacoesRef, id: 'Formações e Cursos Profissionais' },
+      { ref: recursosRef, id: 'Recursos Educativos' },
+      { ref: faqRef, id: 'FAQ' },
+      { ref: contatoRef, id: 'Contato' }
+    ]
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const sectionId = entry.target.getAttribute('data-section-id')
+            if (sectionId) {
+              setVisibleSections((prev) => new Set([...Array.from(prev), sectionId]))
+            }
+          }
+        })
+      },
+      { threshold: 0.1 }
+    )
+
+    sections.forEach(({ ref, id }) => {
+      if (ref.current) {
+        ref.current.setAttribute('data-section-id', id)
+        observer.observe(ref.current)
+      }
+    })
+
+    return () => {
+      sections.forEach(({ ref }) => {
+        if (ref.current) {
+          observer.unobserve(ref.current)
+        }
+      })
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openRecurso) {
+        const target = event.target as Node
+        const isOutsideEbook = ebookButtonRef.current && !ebookButtonRef.current.contains(target)
+        const isOutsideArtigos = artigosButtonRef.current && !artigosButtonRef.current.contains(target)
+        const isOutsideVideos = videosButtonRef.current && !videosButtonRef.current.contains(target)
+
+        if (isOutsideEbook && isOutsideArtigos && isOutsideVideos) {
+          setOpenRecurso(null)
+          setHoveredRecurso(null)
+        }
+      }
+    }
+
+    if (openRecurso) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [openRecurso])
+
+  useEffect(() => {
+    if (window.innerWidth >= 640) return
+
+    const cards = [
+      { ref: mulherCardRef, id: 'mulher' },
+      { ref: parentalCardRef, id: 'parental' },
+      { ref: perinatalCardRef, id: 'perinatal' },
+      { ref: sexhumanCardRef, id: 'sexhuman' }
+    ]
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const cardId = entry.target.getAttribute('data-card-id')
+          if (cardId) {
+            if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+              setHoveredCard(cardId)
+            } else {
+              if (hoveredCard === cardId) {
+                setHoveredCard(null)
+              }
+            }
+          }
+        })
+      },
+      { threshold: [0, 0.5, 1] }
+    )
+
+    cards.forEach(({ ref, id }) => {
+      if (ref.current) {
+        ref.current.setAttribute('data-card-id', id)
+        observer.observe(ref.current)
+      }
+    })
+
+    return () => {
+      cards.forEach(({ ref }) => {
+        if (ref.current) {
+          observer.unobserve(ref.current)
+        }
+      })
+    }
+  }, [hoveredCard])
+
   return (
     <div className="min-h-screen bg-[#f2ede7] pt-16 md:pt-20">
       {/* Header */}
@@ -206,7 +527,7 @@ export default function InicioPage() {
                     }}
                     onMouseEnter={() => setHoveredItem(item)}
                     onMouseLeave={() => setHoveredItem(null)}
-                    onClick={() => setActiveSection(item)}
+                    onClick={() => scrollToSection(item)}
                   >
                     {item}
                     
@@ -312,56 +633,58 @@ export default function InicioPage() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
                 >
-              <div className="flex flex-col items-center justify-center h-full px-8">
-                {/* Menu Items */}
-                <nav className="flex flex-col items-center justify-center gap-8 flex-1">
-                  {menuItems.map((item, index) => (
-                    <motion.button
-                      key={item}
-                      onClick={() => {
-                        setActiveSection(item)
-                        setIsMobileMenuOpen(false)
-                      }}
-                      className="text-2xl font-neue-montreal"
-                      style={{ color: '#f56428' }}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{
-                        opacity: isMobileMenuOpen ? 1 : 0,
-                        y: isMobileMenuOpen ? 0 : 20
-                      }}
-                      transition={{
-                        duration: 0.4,
-                        delay: index * 0.1,
-                        ease: 'easeOut'
-                      }}
-                    >
-                      {item}
-                    </motion.button>
-                  ))}
-                </nav>
+              <div className="absolute inset-0 flex flex-col items-center justify-center px-8">
+                {/* Menu Items e Logo agrupados */}
+                <div className="flex flex-col items-center">
+                  {/* Menu Items */}
+                  <nav className="flex flex-col items-center gap-8 mb-12">
+                    {menuItems.map((item, index) => (
+                      <motion.button
+                        key={item}
+                        onClick={() => {
+                          scrollToSection(item)
+                          setIsMobileMenuOpen(false)
+                        }}
+                        className="text-2xl font-neue-montreal"
+                        style={{ color: '#f56428' }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{
+                          opacity: isMobileMenuOpen ? 1 : 0,
+                          y: isMobileMenuOpen ? 0 : 20
+                        }}
+                        transition={{
+                          duration: 0.4,
+                          delay: index * 0.1,
+                          ease: 'easeOut'
+                        }}
+                      >
+                        {item}
+                      </motion.button>
+                    ))}
+                  </nav>
 
-                {/* Logo */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{
-                    opacity: isMobileMenuOpen ? 1 : 0,
-                    y: isMobileMenuOpen ? 0 : 20
-                  }}
-                  transition={{
-                    duration: 0.4,
-                    delay: menuItems.length * 0.1,
-                    ease: 'easeOut'
-                  }}
-                  className="mb-8"
-                >
-                  <Image
-                    src="/logohoriz.svg"
-                    alt="Logo"
-                    width={150}
-                    height={50}
-                    className="h-8 w-auto"
-                  />
-                </motion.div>
+                  {/* Logo */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{
+                      opacity: isMobileMenuOpen ? 1 : 0,
+                      y: isMobileMenuOpen ? 0 : 20
+                    }}
+                    transition={{
+                      duration: 0.4,
+                      delay: menuItems.length * 0.1,
+                      ease: 'easeOut'
+                    }}
+                  >
+                    <Image
+                      src="/logohoriz.svg"
+                      alt="Logo"
+                      width={150}
+                      height={50}
+                      className="h-8 w-auto"
+                    />
+                  </motion.div>
+                </div>
               </div>
                 </motion.div>
               )}
@@ -467,8 +790,8 @@ export default function InicioPage() {
                     className="absolute inset-0"
                     style={{
                       backgroundImage: 'url(/srosa.svg)',
-                      backgroundSize: 'clamp(35%, 50vw, 60%)',
-                      backgroundPosition: '5% center',
+                      backgroundSize: window.innerWidth < 640 ? '200%' : 'clamp(35%, 50vw, 60%)',
+                      backgroundPosition: window.innerWidth < 640 ? 'center center' : '5% center',
                       backgroundRepeat: 'no-repeat',
                       opacity: 1,
                       x: parallaxX,
@@ -524,21 +847,6 @@ export default function InicioPage() {
                             <span className="relative z-10">Contrate</span>
                           </motion.button>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Foto - Alinhada na base */}
-                    <div className="absolute left-0 bottom-0 w-full z-10 hidden sm:block">
-                      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pl-4 sm:pl-8 md:pl-16 lg:pl-24">
-                        <Image
-                          src="/fotofredericarec.png"
-                          alt="Dra. Frederica Passos"
-                          width={900}
-                          height={900}
-                          className="w-auto object-contain"
-                          style={{ height: '100%', display: 'block', maxWidth: '700px' }}
-                          priority={index === currentSlide}
-                        />
                       </div>
                     </div>
                   </>
@@ -654,17 +962,52 @@ export default function InicioPage() {
       </div>
 
       {/* Seção Sobre */}
-      <section className="w-full bg-[#f2ede7] py-12 sm:py-16 md:py-24 min-h-[300px] sm:min-h-[400px] flex items-center">
+      <motion.section
+        ref={sobreRef}
+        id="Sobre"
+        className="w-full bg-[#f2ede7] py-12 sm:py-16 md:py-24"
+        initial={{ opacity: 0, y: 50 }}
+        animate={{
+          opacity: visibleSections.has('Sobre') ? 1 : 0,
+          y: visibleSections.has('Sobre') ? 0 : 50
+        }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <h2 className="font-jh-caudemars text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-gray-900 mb-8 sm:mb-12 md:mb-16 text-center">
-            Sobre
-          </h2>
-          <div className="text-gray-600">
-            {/* Placeholder - conteúdo será adicionado depois */}
-            <p>Conteúdo da seção Sobre será adicionado aqui.</p>
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start lg:items-center">
+            {/* Texto - Lado Esquerdo */}
+            <div className="flex-1 lg:flex-[1.5]">
+              <h2 className="font-jh-caudemars text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl mb-6 sm:mb-8" style={{ color: '#70309e' }}>
+                Uma Carreira Dedicada à Saúde Mental da Mulher
+              </h2>
+              
+              <div className="space-y-4 sm:space-y-6 text-gray-700 text-sm sm:text-base md:text-lg">
+                <p className="font-neue-montreal leading-relaxed">
+                  <strong>Dra. Frederica Passos Barbizani</strong> é psiquiatra especializada em Saúde Mental da Mulher. Com foco no universo feminino, acredita que toda mulher merece cuidados de saúde mental que respeitem suas particularidades biológicas, psicológicas e sociais.
+                </p>
+                
+                <p className="font-neue-montreal leading-relaxed">
+                  Especializou-se em Psiquiatria no Hospital Beatriz Ângelo, com foco em Psiquiatria da Mulher e Psiquiatria Perinatal. Sua prática clínica baseia-se em pilares fundamentais: cuidado humanizado, evidência científica, abordagem integral e empoderamento da paciente. Dedica-se também à investigação científica, com interesse particular em perturbações do humor no período perinatal, impacto hormonal na saúde mental, sexualidade, identidade de género, competências parentais e dinâmicas familiares.
+                </p>
+              </div>
+            </div>
+
+            {/* Imagem - Lado Direito */}
+            <div className="flex-1 lg:flex-[1.5] w-full lg:w-auto">
+              <div className="relative w-full aspect-[3/4] lg:aspect-[4/5]">
+                <Image
+                  src="/fotofrederica.webp"
+                  alt="Dra. Frederica Passos Barbizani"
+                  fill
+                  className="object-cover rounded-lg"
+                  quality={100}
+                  unoptimized
+                />
+              </div>
+            </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Faixa laranja com pattern e parallax */}
       <div ref={faixaRef} className="relative w-full bg-[#f56428] py-4 md:py-6 overflow-hidden">
@@ -686,7 +1029,17 @@ export default function InicioPage() {
       </div>
 
       {/* Seção Áreas de Especialização */}
-      <section className="w-full bg-pink-200 py-12 sm:py-16 md:py-24">
+      <motion.section
+        ref={areasRef}
+        id="Áreas de Especialização"
+        className="w-full bg-pink-200 py-12 sm:py-16 md:py-24"
+        initial={{ opacity: 0, y: 50 }}
+        animate={{
+          opacity: visibleSections.has('Áreas de Especialização') ? 1 : 0,
+          y: visibleSections.has('Áreas de Especialização') ? 0 : 50
+        }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="font-jh-caudemars text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl mb-8 sm:mb-12 md:mb-16 lg:mb-20 text-center" style={{ color: '#70309e' }}>
             Áreas de Especialização
@@ -695,10 +1048,19 @@ export default function InicioPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {/* Card Mulher */}
             <motion.div
+              ref={mulherCardRef}
               className="relative overflow-hidden rounded-lg cursor-pointer"
-              onHoverStart={() => setHoveredCard('mulher')}
-              onHoverEnd={() => setHoveredCard(null)}
-              whileHover={{ scale: 1.05 }}
+              onHoverStart={() => {
+                if (window.innerWidth >= 640) {
+                  setHoveredCard('mulher')
+                }
+              }}
+              onHoverEnd={() => {
+                if (window.innerWidth >= 640) {
+                  setHoveredCard(null)
+                }
+              }}
+              whileHover={window.innerWidth >= 640 ? { scale: 1.05 } : {}}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
               <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px]">
@@ -772,10 +1134,19 @@ export default function InicioPage() {
 
             {/* Card Parental */}
             <motion.div
+              ref={parentalCardRef}
               className="relative overflow-hidden rounded-lg cursor-pointer"
-              onHoverStart={() => setHoveredCard('parental')}
-              onHoverEnd={() => setHoveredCard(null)}
-              whileHover={{ scale: 1.05 }}
+              onHoverStart={() => {
+                if (window.innerWidth >= 640) {
+                  setHoveredCard('parental')
+                }
+              }}
+              onHoverEnd={() => {
+                if (window.innerWidth >= 640) {
+                  setHoveredCard(null)
+                }
+              }}
+              whileHover={window.innerWidth >= 640 ? { scale: 1.05 } : {}}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
               <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px]">
@@ -845,10 +1216,19 @@ export default function InicioPage() {
 
             {/* Card Perinatal */}
             <motion.div
+              ref={perinatalCardRef}
               className="relative overflow-hidden rounded-lg cursor-pointer"
-              onHoverStart={() => setHoveredCard('perinatal')}
-              onHoverEnd={() => setHoveredCard(null)}
-              whileHover={{ scale: 1.05 }}
+              onHoverStart={() => {
+                if (window.innerWidth >= 640) {
+                  setHoveredCard('perinatal')
+                }
+              }}
+              onHoverEnd={() => {
+                if (window.innerWidth >= 640) {
+                  setHoveredCard(null)
+                }
+              }}
+              whileHover={window.innerWidth >= 640 ? { scale: 1.05 } : {}}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
               <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px]">
@@ -918,10 +1298,19 @@ export default function InicioPage() {
 
             {/* Card Sexhuman */}
             <motion.div
+              ref={sexhumanCardRef}
               className="relative overflow-hidden rounded-lg cursor-pointer"
-              onHoverStart={() => setHoveredCard('sexhuman')}
-              onHoverEnd={() => setHoveredCard(null)}
-              whileHover={{ scale: 1.05 }}
+              onHoverStart={() => {
+                if (window.innerWidth >= 640) {
+                  setHoveredCard('sexhuman')
+                }
+              }}
+              onHoverEnd={() => {
+                if (window.innerWidth >= 640) {
+                  setHoveredCard(null)
+                }
+              }}
+              whileHover={window.innerWidth >= 640 ? { scale: 1.05 } : {}}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
               <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px]">
@@ -990,17 +1379,25 @@ export default function InicioPage() {
             </motion.div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Seção Formações e Cursos Profissionais */}
-      <section className="relative w-full bg-[#f2ede7] pt-12 sm:pt-16 md:pt-24 pb-16 sm:pb-20 md:pb-28 overflow-x-hidden overflow-y-visible">
+      <motion.section
+        ref={formacoesRef}
+        id="Formações e Cursos Profissionais"
+        className="relative w-full bg-[#f2ede7] pt-12 sm:pt-16 md:pt-24 pb-16 sm:pb-20 md:pb-28 overflow-x-hidden overflow-y-visible"
+        initial={{ opacity: 0, y: 50 }}
+        animate={{
+          opacity: visibleSections.has('Formações e Cursos Profissionais') ? 1 : 0,
+          y: visibleSections.has('Formações e Cursos Profissionais') ? 0 : 50
+        }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+      >
         <div 
-          className="absolute inset-0"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat sm:bg-[length:170%]"
           style={{
             backgroundImage: 'url(/fundo2.svg)',
-            backgroundSize: '170%',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
+            backgroundSize: '250%',
           }}
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full z-10">
@@ -1013,7 +1410,7 @@ export default function InicioPage() {
             className="relative w-full"
             style={{ perspective: '1000px', minHeight: '400px', paddingBottom: '4rem' }}
           >
-            <div className="relative w-full h-[400px] sm:h-[500px] md:h-[600px] flex items-center justify-center z-10 overflow-visible">
+            <div className="relative w-full h-[450px] sm:h-[500px] md:h-[600px] flex items-center justify-center z-10 overflow-visible">
               {[
                 {
                   id: 0,
@@ -1147,7 +1544,7 @@ export default function InicioPage() {
                       </div>
                       
                       {/* Conteúdo à direita */}
-                      <div className="w-full md:w-1/2 h-1/2 md:h-full flex flex-col justify-center p-6 md:p-8 lg:p-12 text-white">
+                      <div className="w-full md:w-1/2 h-1/2 md:h-full flex flex-col justify-center p-6 md:p-8 lg:p-12 text-white pb-10 md:pb-8 items-center md:items-start">
                         <h3 className="font-jh-caudemars text-2xl md:text-3xl lg:text-4xl mb-4 md:mb-6 text-center md:text-left">
                           {formacao.title}
                         </h3>
@@ -1157,7 +1554,7 @@ export default function InicioPage() {
                         
                         {/* Botão Contrate */}
                         <motion.button
-                          className="font-neue-montreal text-white px-6 py-3 md:px-8 md:py-4 rounded-lg text-sm md:text-base lg:text-lg font-medium relative overflow-hidden w-fit self-center md:self-start"
+                          className="font-neue-montreal text-white px-6 py-3.5 md:px-8 md:py-4 rounded-lg text-sm md:text-base lg:text-lg font-medium relative overflow-hidden w-full md:w-fit md:self-start text-center min-h-[48px] md:min-h-0"
                           style={{
                             backgroundColor: '#70309e',
                             borderRadius: '8px',
@@ -1248,30 +1645,559 @@ export default function InicioPage() {
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Seção Estatísticas da Prática Clínica */}
-      <section className="w-full bg-[#70309e] py-12 sm:py-16 md:py-24 min-h-[300px] sm:min-h-[400px] flex items-center">
+      <section 
+        ref={statsRef}
+        className="w-full bg-[#70309e] py-12 sm:py-16 md:py-24 min-h-[300px] sm:min-h-[400px] flex items-center"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <h2 className="font-jh-caudemars text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-white mb-8 sm:mb-12 md:mb-16 text-center">
             Estatísticas da Prática Clínica
           </h2>
-          <div className="text-white/90">
-            {/* Placeholder - conteúdo será adicionado depois */}
-            <p>Conteúdo das estatísticas será adicionado aqui.</p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+            {/* Mulheres Tratadas */}
+            <div className="flex flex-col items-center text-center w-full max-w-full px-4 py-6 rounded-lg">
+              <div className="mb-6 sm:mb-8">
+                <Image
+                  src="/iconmulher.png"
+                  alt="Mulheres"
+                  width={120}
+                  height={120}
+                  className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 object-contain"
+                />
+              </div>
+              <motion.div
+                className="text-4xl sm:text-5xl md:text-6xl font-jh-caudemars font-bold text-white mb-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: statsVisible ? 1 : 0, y: statsVisible ? 0 : 20 }}
+                transition={{ duration: 0.5 }}
+              >
+                +{statsCounters.mulheres}
+              </motion.div>
+              <p className="text-white/90 font-neue-montreal text-sm sm:text-base md:text-lg break-words hyphens-auto">
+                Mulheres Tratadas em Psiquiatria Perinatal
+              </p>
+            </div>
+
+            {/* Melhoria Depressão */}
+            <div className="flex flex-col items-center text-center w-full max-w-full px-4 py-6 rounded-lg">
+              <div className="mb-6 sm:mb-8">
+                <Image
+                  src="/iconup.png"
+                  alt="Melhoria"
+                  width={120}
+                  height={120}
+                  className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 object-contain"
+                />
+              </div>
+              <motion.div
+                className="text-4xl sm:text-5xl md:text-6xl font-jh-caudemars font-bold text-white mb-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: statsVisible ? 1 : 0, y: statsVisible ? 0 : 20 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                {statsCounters.melhoria}%
+              </motion.div>
+              <p className="text-white/90 font-neue-montreal text-sm sm:text-base md:text-lg break-words hyphens-auto">
+                Melhoria Significativa nos<br />
+                Sintomas de Depressão Pós Parto
+              </p>
+            </div>
+
+            {/* Profissionais Formados */}
+            <div className="flex flex-col items-center text-center w-full max-w-full px-4 py-6 rounded-lg">
+              <div className="mb-6 sm:mb-8">
+                <Image
+                  src="/icongrad.png"
+                  alt="Profissionais"
+                  width={120}
+                  height={120}
+                  className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 object-contain"
+                />
+              </div>
+              <motion.div
+                className="text-4xl sm:text-5xl md:text-6xl font-jh-caudemars font-bold text-white mb-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: statsVisible ? 1 : 0, y: statsVisible ? 0 : 20 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                +{statsCounters.profissionais}
+              </motion.div>
+              <p className="text-white/90 font-neue-montreal text-sm sm:text-base md:text-lg break-words hyphens-auto">
+                Profissionais de Saúde Formados
+              </p>
+            </div>
+
+            {/* Satisfação */}
+            <div className="flex flex-col items-center text-center w-full max-w-full px-4 py-6 rounded-lg">
+              <div className="mb-6 sm:mb-8">
+                <Image
+                  src="/iconstars.png"
+                  alt="Satisfação"
+                  width={120}
+                  height={120}
+                  className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 object-contain"
+                />
+              </div>
+              <motion.div
+                className="text-4xl sm:text-5xl md:text-6xl font-jh-caudemars font-bold text-white mb-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: statsVisible ? 1 : 0, y: statsVisible ? 0 : 20 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+              >
+                {statsCounters.satisfacao}%
+              </motion.div>
+              <p className="text-white/90 font-neue-montreal text-sm sm:text-base md:text-lg break-words hyphens-auto">
+                Satisfação com o Tratamento
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
+      {/* Seção Recursos Educativos */}
+      <motion.section
+        ref={recursosRef}
+        id="Recursos Educativos"
+        className="relative w-full bg-[#f2ede7] py-12 sm:py-16 md:py-24 overflow-hidden"
+        initial={{ opacity: 0, y: 50 }}
+        animate={{
+          opacity: visibleSections.has('Recursos Educativos') ? 1 : 0,
+          y: visibleSections.has('Recursos Educativos') ? 0 : 50
+        }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+      >
+        {/* Animações de Background */}
+        {/* Livro abrindo (E-books) */}
+        <AnimatePresence>
+          {hoveredRecurso === 'ebook' && (
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 3.8, opacity: 0.6, y: -30 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ 
+                type: "spring",
+                stiffness: 150,
+                damping: 20,
+                mass: 0.8
+              }}
+              style={{ filter: 'blur(2px)' }}
+            >
+              <div 
+                style={{
+                  filter: 'brightness(0) saturate(100%) invert(64%) sepia(93%) saturate(2800%) hue-rotate(349deg) brightness(96%) contrast(96%)',
+                  mixBlendMode: 'multiply'
+                }}
+                className="w-full h-full"
+              >
+                <Lottie 
+                  animationData={bookAnimation} 
+                  loop={true}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Documento com linhas (Artigos) */}
+        <AnimatePresence>
+          {hoveredRecurso === 'artigos' && (
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 3, opacity: 0.6 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ 
+                type: "spring",
+                stiffness: 150,
+                damping: 20,
+                mass: 0.8
+              }}
+              style={{ filter: 'blur(2px)' }}
+            >
+              <div 
+                style={{
+                  filter: 'brightness(0) saturate(100%) invert(64%) sepia(93%) saturate(2800%) hue-rotate(349deg) brightness(96%) contrast(96%)'
+                }}
+              >
+                <Lottie 
+                  animationData={documentAnimation} 
+                  loop={true}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Player de vídeo (Vídeos) */}
+        <AnimatePresence>
+          {hoveredRecurso === 'videos' && (
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: window.innerWidth < 640 ? 1.5 : 0.8, opacity: 0.6 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ 
+                type: "spring",
+                stiffness: 150,
+                damping: 20,
+                mass: 0.8
+              }}
+              style={{ filter: 'blur(4px)' }}
+            >
+              <div 
+                style={{
+                  filter: 'brightness(0) saturate(100%) invert(64%) sepia(93%) saturate(2800%) hue-rotate(349deg) brightness(96%) contrast(96%)'
+                }}
+              >
+                <Lottie 
+                  animationData={videoAnimation} 
+                  loop={true}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="flex flex-col lg:flex-row items-center lg:items-center gap-8 lg:gap-12">
+            {/* Título - Lado Esquerdo */}
+            <div className="flex-1 flex items-center justify-center lg:justify-start">
+              <h2 className="font-jh-caudemars text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl text-gray-900 leading-tight break-words text-center lg:text-left">
+                Recursos<br />
+                Educativos
+              </h2>
+            </div>
+
+            {/* Botões - Lado Direito */}
+            <div className="flex-1 flex flex-col gap-4 sm:gap-6 w-full lg:w-auto justify-center">
+              {/* E-books */}
+              <div 
+                ref={ebookButtonRef}
+                className="relative w-full lg:w-64"
+                style={{ perspective: '1000px', zIndex: 10 }}
+              >
+                <div
+                  className="absolute inset-0 z-20 cursor-pointer sm:cursor-pointer"
+                  onMouseEnter={() => {
+                    if (window.innerWidth >= 640) {
+                      setHoveredRecurso('ebook')
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (window.innerWidth >= 640) {
+                      setHoveredRecurso(null)
+                    }
+                  }}
+                  onClick={() => {
+                    if (window.innerWidth < 640) {
+                      if (openRecurso === 'ebook') {
+                        setOpenRecurso(null)
+                        setHoveredRecurso(null)
+                      } else {
+                        setOpenRecurso('ebook')
+                        setHoveredRecurso('ebook')
+                      }
+                    }
+                  }}
+                />
+                <motion.button
+                  className="relative w-full px-6 py-4 pr-12 sm:pr-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                  style={{
+                    backgroundColor: '#f56428',
+                    transformStyle: 'preserve-3d',
+                    backfaceVisibility: 'hidden',
+                    pointerEvents: 'none'
+                  }}
+                  animate={{ rotateX: (hoveredRecurso === 'ebook' || openRecurso === 'ebook') ? 360 : 0 }}
+                  transition={{ 
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 20,
+                    mass: 1
+                  }}
+                >
+                  <div className="absolute inset-0 rounded-lg overflow-hidden">
+                    <motion.div
+                      className="absolute inset-0 rounded-lg"
+                      style={{
+                        background: `linear-gradient(135deg, #70309e 0%, #f56428 100%)`,
+                      }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: (hoveredRecurso === 'ebook' || openRecurso === 'ebook') ? 1 : 0 }}
+                      transition={{ duration: 0.4, ease: 'easeInOut' }}
+                    />
+                  </div>
+                <motion.span 
+                  className="relative z-10 font-neue-montreal text-white text-lg font-medium block w-full text-left"
+                  animate={{ 
+                    opacity: (hoveredRecurso === 'ebook' || openRecurso === 'ebook') ? 0 : 1 
+                  }}
+                  transition={{ duration: 0.2 }}
+                >
+                  E-books
+                </motion.span>
+                <motion.span 
+                  className="absolute inset-0 flex items-center px-6 font-neue-montreal text-white text-lg font-medium z-10"
+                  initial={{ opacity: 0 }}
+                  animate={{ 
+                    opacity: (hoveredRecurso === 'ebook' || openRecurso === 'ebook') ? 1 : 0 
+                  }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Descarregar
+                </motion.span>
+                  <svg
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white z-10 sm:hidden"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </motion.button>
+              </div>
+
+              {/* Artigos e Guias */}
+              <div 
+                ref={artigosButtonRef}
+                className="relative w-full lg:w-64"
+                style={{ perspective: '1000px', zIndex: 10 }}
+              >
+                <div
+                  className="absolute inset-0 z-20 cursor-pointer sm:cursor-pointer"
+                  onMouseEnter={() => {
+                    if (window.innerWidth >= 640) {
+                      setHoveredRecurso('artigos')
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (window.innerWidth >= 640) {
+                      setHoveredRecurso(null)
+                    }
+                  }}
+                  onClick={() => {
+                    if (window.innerWidth < 640) {
+                      if (openRecurso === 'artigos') {
+                        setOpenRecurso(null)
+                        setHoveredRecurso(null)
+                      } else {
+                        setOpenRecurso('artigos')
+                        setHoveredRecurso('artigos')
+                      }
+                    }
+                  }}
+                />
+                <motion.button
+                  className="relative w-full px-6 py-4 pr-12 sm:pr-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                  style={{
+                    backgroundColor: '#f56428',
+                    transformStyle: 'preserve-3d',
+                    backfaceVisibility: 'hidden',
+                    pointerEvents: 'none'
+                  }}
+                  animate={{ rotateX: (hoveredRecurso === 'artigos' || openRecurso === 'artigos') ? 360 : 0 }}
+                  transition={{ 
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 20,
+                    mass: 1
+                  }}
+                >
+                  <div className="absolute inset-0 rounded-lg overflow-hidden">
+                    <motion.div
+                      className="absolute inset-0 rounded-lg"
+                      style={{
+                        background: `linear-gradient(135deg, #70309e 0%, #f56428 100%)`,
+                      }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: (hoveredRecurso === 'artigos' || openRecurso === 'artigos') ? 1 : 0 }}
+                      transition={{ duration: 0.4, ease: 'easeInOut' }}
+                    />
+                  </div>
+                <motion.span 
+                  className="relative z-10 font-neue-montreal text-white text-lg font-medium block w-full text-left"
+                  animate={{ 
+                    opacity: (hoveredRecurso === 'artigos' || openRecurso === 'artigos') ? 0 : 1 
+                  }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Artigos e Guias
+                </motion.span>
+                <motion.span 
+                  className="absolute inset-0 flex items-center px-6 font-neue-montreal text-white text-lg font-medium z-10"
+                  initial={{ opacity: 0 }}
+                  animate={{ 
+                    opacity: (hoveredRecurso === 'artigos' || openRecurso === 'artigos') ? 1 : 0 
+                  }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Descarregar
+                </motion.span>
+                  <svg
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white z-10 sm:hidden"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </motion.button>
+              </div>
+
+              {/* Vídeos Educativos */}
+              <div 
+                ref={videosButtonRef}
+                className="relative w-full lg:w-64"
+                style={{ perspective: '1000px', zIndex: 10 }}
+              >
+                <div
+                  className="absolute inset-0 z-20 cursor-pointer sm:cursor-pointer"
+                  onMouseEnter={() => {
+                    if (window.innerWidth >= 640) {
+                      setHoveredRecurso('videos')
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (window.innerWidth >= 640) {
+                      setHoveredRecurso(null)
+                    }
+                  }}
+                  onClick={() => {
+                    if (window.innerWidth < 640) {
+                      if (openRecurso === 'videos') {
+                        setOpenRecurso(null)
+                        setHoveredRecurso(null)
+                      } else {
+                        setOpenRecurso('videos')
+                        setHoveredRecurso('videos')
+                      }
+                    }
+                  }}
+                />
+                <motion.button
+                  className="relative w-full px-6 py-4 pr-12 sm:pr-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                  style={{
+                    backgroundColor: '#f56428',
+                    transformStyle: 'preserve-3d',
+                    backfaceVisibility: 'hidden',
+                    pointerEvents: 'none'
+                  }}
+                  animate={{ rotateX: (hoveredRecurso === 'videos' || openRecurso === 'videos') ? 360 : 0 }}
+                  transition={{ 
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 20,
+                    mass: 1
+                  }}
+                >
+                  <div className="absolute inset-0 rounded-lg overflow-hidden">
+                    <motion.div
+                      className="absolute inset-0 rounded-lg"
+                      style={{
+                        background: `linear-gradient(135deg, #70309e 0%, #f56428 100%)`,
+                      }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: (hoveredRecurso === 'videos' || openRecurso === 'videos') ? 1 : 0 }}
+                      transition={{ duration: 0.4, ease: 'easeInOut' }}
+                    />
+                  </div>
+                <motion.span 
+                  className="relative z-10 font-neue-montreal text-white text-lg font-medium block w-full text-left"
+                  animate={{ 
+                    opacity: (hoveredRecurso === 'videos' || openRecurso === 'videos') ? 0 : 1 
+                  }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Vídeos Educativos
+                </motion.span>
+                <motion.span 
+                  className="absolute inset-0 flex items-center px-6 font-neue-montreal text-white text-lg font-medium z-10"
+                  initial={{ opacity: 0 }}
+                  animate={{ 
+                    opacity: (hoveredRecurso === 'videos' || openRecurso === 'videos') ? 1 : 0 
+                  }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Descarregar
+                </motion.span>
+                  <svg
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white z-10 sm:hidden"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </motion.button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Barra Roxa com Typewriter */}
+      <div ref={typewriterBarRef} className="relative w-full bg-[#70309e] py-6 sm:py-12 md:py-20 lg:py-24 overflow-hidden">
+        {/* Background Image com Parallax */}
+        <motion.div
+          className="absolute bg-cover"
+          style={{
+            top: '-30%',
+            left: 0,
+            right: 0,
+            bottom: '-30%',
+            backgroundImage: 'url(/meninas.webp)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center center',
+            backgroundRepeat: 'no-repeat',
+            opacity: 0.5,
+            y: typewriterParallaxY,
+          }}
+        />
+        
+        {/* Overlay roxo escuro */}
+        <div className="absolute inset-0 bg-[#70309e]/70" />
+        
+        {/* Conteúdo */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center min-h-[100px] sm:min-h-[150px] md:min-h-[250px] lg:min-h-[300px]">
+            <h2 className="font-jh-caudemars font-bold text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-center">
+              {typewriterText}
+              <motion.span
+                animate={{ opacity: [1, 0] }}
+                transition={{ duration: 0.8, repeat: Infinity }}
+                className="inline-block ml-2"
+              >
+                |
+              </motion.span>
+            </h2>
+          </div>
+        </div>
+      </div>
+
       {/* Seção FAQ */}
-      <section 
+      <motion.section
+        ref={faqRef}
         className="w-full bg-[#f2ede7] py-12 sm:py-16 md:py-24"
         style={{
           backgroundImage: 'url(/srosa.svg)',
-          backgroundSize: '70%',
+          backgroundSize: window.innerWidth < 640 ? '250%' : '70%',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
         }}
+        initial={{ opacity: 0, y: 50 }}
+        animate={{
+          opacity: visibleSections.has('FAQ') ? 1 : 0,
+          y: visibleSections.has('FAQ') ? 0 : 50
+        }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <h2 className="font-jh-caudemars text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-gray-900 mb-8 sm:mb-12 md:mb-16 text-center">
@@ -1416,7 +2342,219 @@ export default function InicioPage() {
             })}
           </div>
         </div>
-      </section>
+      </motion.section>
+
+      {/* Seção Contato */}
+      <motion.section
+        ref={contatoRef}
+        id="Contato"
+        className="relative w-full bg-[#f56428] py-12 sm:py-16 md:py-24 overflow-hidden"
+        initial={{ opacity: 0, y: 50 }}
+        animate={{
+          opacity: visibleSections.has('Contato') ? 1 : 0,
+          y: visibleSections.has('Contato') ? 0 : 50
+        }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+      >
+        <div 
+          className="absolute inset-0 opacity-100"
+          style={{
+            backgroundImage: 'url(/fundo2.svg)',
+            backgroundSize: window.innerWidth < 640 ? '400%' : '200%',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        />
+        <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <h2 className="font-jh-caudemars text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-white mb-8 sm:mb-12 md:mb-16 text-center">
+            Contato
+          </h2>
+          
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault()
+              const errors: Record<string, string> = {}
+              
+              if (!formData.nome.trim()) errors.nome = 'Nome é obrigatório'
+              if (!formData.email.trim()) errors.email = 'E-mail é obrigatório'
+              else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+                errors.email = 'E-mail inválido'
+              }
+              if (!formData.telefone.trim()) errors.telefone = 'Telefone é obrigatório'
+              if (!formData.tipoConsulta) errors.tipoConsulta = 'Tipo de consulta é obrigatório'
+              if (!formData.mensagem.trim()) errors.mensagem = 'Mensagem é obrigatória'
+              
+              setFormErrors(errors)
+              
+              if (Object.keys(errors).length === 0) {
+                setIsSubmitting(true)
+                setTimeout(() => {
+                  setIsSubmitting(false)
+                  alert('Formulário enviado com sucesso!')
+                  setFormData({
+                    nome: '',
+                    email: '',
+                    telefone: '',
+                    tipoConsulta: '',
+                    mensagem: ''
+                  })
+                }, 1000)
+              }
+            }}
+            className="space-y-6"
+          >
+            <div>
+              <label htmlFor="nome" className="block text-white font-neue-montreal text-sm font-medium mb-2">
+                Nome *
+              </label>
+              <input
+                type="text"
+                id="nome"
+                value={formData.nome}
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                className={`w-full px-4 py-3 rounded-lg bg-white/10 backdrop-blur-sm border-2 ${
+                  formErrors.nome ? 'border-red-500' : 'border-white/20'
+                } text-white placeholder-white/60 font-neue-montreal focus:outline-none focus:border-white/40 transition-colors`}
+                placeholder="Seu nome completo"
+              />
+              {formErrors.nome && (
+                <p className="text-red-200 text-sm mt-1 font-neue-montreal">{formErrors.nome}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-white font-neue-montreal text-sm font-medium mb-2">
+                E-mail *
+              </label>
+              <input
+                type="email"
+                id="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className={`w-full px-4 py-3 rounded-lg bg-white/10 backdrop-blur-sm border-2 ${
+                  formErrors.email ? 'border-red-500' : 'border-white/20'
+                } text-white placeholder-white/60 font-neue-montreal focus:outline-none focus:border-white/40 transition-colors`}
+                placeholder="seu@email.com"
+              />
+              {formErrors.email && (
+                <p className="text-red-200 text-sm mt-1 font-neue-montreal">{formErrors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="telefone" className="block text-white font-neue-montreal text-sm font-medium mb-2">
+                Telefone *
+              </label>
+              <input
+                type="tel"
+                id="telefone"
+                value={formData.telefone}
+                onChange={(e) => {
+                  const formatted = formatarTelefonePortugal(e.target.value)
+                  setFormData({ ...formData, telefone: formatted })
+                }}
+                className={`w-full px-4 py-3 rounded-lg bg-white/10 backdrop-blur-sm border-2 ${
+                  formErrors.telefone ? 'border-red-500' : 'border-white/20'
+                } text-white placeholder-white/60 font-neue-montreal focus:outline-none focus:border-white/40 transition-colors`}
+                placeholder="+351 912 345 678"
+              />
+              {formErrors.telefone && (
+                <p className="text-red-200 text-sm mt-1 font-neue-montreal">{formErrors.telefone}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-white font-neue-montreal text-sm font-medium mb-3">
+                Tipo de Consulta *
+              </label>
+              <div className="space-y-3">
+                {['Primeira Consulta', 'Consulta de Seguimento', 'Teleatendimento'].map((tipo) => (
+                  <label
+                    key={tipo}
+                    className="flex items-center cursor-pointer group"
+                  >
+                    <input
+                      type="radio"
+                      name="tipoConsulta"
+                      value={tipo}
+                      checked={formData.tipoConsulta === tipo}
+                      onChange={(e) => setFormData({ ...formData, tipoConsulta: e.target.value })}
+                      className="sr-only"
+                    />
+                    <div className={`relative w-6 h-6 rounded border-2 ${
+                      formData.tipoConsulta === tipo 
+                        ? 'border-[#70309e] bg-[#70309e]' 
+                        : 'border-white/40 bg-white/10'
+                    } transition-all duration-200 flex items-center justify-center mr-3 group-hover:border-white/60`}>
+                      {formData.tipoConsulta === tipo && (
+                        <svg 
+                          className="w-4 h-4 text-white" 
+                          fill="none" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth="3" 
+                          viewBox="0 0 24 24" 
+                          stroke="currentColor"
+                        >
+                          <path d="M5 13l4 4L19 7"></path>
+                        </svg>
+                      )}
+                    </div>
+                    <span className="text-white font-neue-montreal">{tipo}</span>
+                  </label>
+                ))}
+              </div>
+              {formErrors.tipoConsulta && (
+                <p className="text-red-200 text-sm mt-1 font-neue-montreal">{formErrors.tipoConsulta}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="mensagem" className="block text-white font-neue-montreal text-sm font-medium mb-2">
+                Mensagem *
+              </label>
+              <textarea
+                id="mensagem"
+                value={formData.mensagem}
+                onChange={(e) => setFormData({ ...formData, mensagem: e.target.value })}
+                rows={6}
+                className={`w-full px-4 py-3 rounded-lg bg-white/10 backdrop-blur-sm border-2 ${
+                  formErrors.mensagem ? 'border-red-500' : 'border-white/20'
+                } text-white placeholder-white/60 font-neue-montreal focus:outline-none focus:border-white/40 transition-colors resize-none`}
+                placeholder="Escreva sua mensagem..."
+              />
+              {formErrors.mensagem && (
+                <p className="text-red-200 text-sm mt-1 font-neue-montreal">{formErrors.mensagem}</p>
+              )}
+            </div>
+
+            <motion.button
+              type="submit"
+              disabled={isSubmitting}
+              onMouseEnter={() => setIsEnviarHovered(true)}
+              onMouseLeave={() => setIsEnviarHovered(false)}
+              className="relative w-full py-4 px-6 rounded-lg text-white font-neue-montreal font-medium text-lg overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+              whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
+              whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
+            >
+              <motion.div
+                className="absolute inset-0 rounded-lg"
+                style={{
+                  background: isEnviarHovered 
+                    ? `linear-gradient(135deg, #70309e 0%, #f56428 100%)`
+                    : '#70309e'
+                }}
+                initial={{ opacity: 1 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, ease: 'easeInOut' }}
+              />
+              <span className="relative z-10">
+                {isSubmitting ? 'Enviando...' : 'Enviar'}
+              </span>
+            </motion.button>
+          </form>
+        </div>
+      </motion.section>
 
       {/* Faixa preta com texto rolando */}
       <div className="w-full bg-[#161616] py-2 sm:py-3 md:py-4 overflow-hidden">
@@ -1512,7 +2650,7 @@ export default function InicioPage() {
                     }}
                     onMouseEnter={() => setHoveredFooterItem(item)}
                     onMouseLeave={() => setHoveredFooterItem(null)}
-                    onClick={() => setActiveSection(item)}
+                    onClick={() => scrollToSection(item)}
                   >
                     {item}
                     
