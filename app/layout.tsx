@@ -103,6 +103,9 @@ const chreed = localFont({
 export const metadata: Metadata = {
   title: 'Frederica Passos',
   description: 'Projeto Next.js com Tailwind CSS',
+  icons: {
+    icon: '/circleorange.svg',
+  },
 }
 
 export default function RootLayout({
