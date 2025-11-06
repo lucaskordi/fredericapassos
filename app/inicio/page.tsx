@@ -14,7 +14,7 @@ export default function InicioPage() {
   const [activeSection, setActiveSection] = useState('Início')
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null)
+  const [hoveredCard, setHoveredCard] = useState<Set<string>>(new Set())
   const [currentFormacao, setCurrentFormacao] = useState(0)
   const [hoveredContrateFormacao, setHoveredContrateFormacao] = useState<number | null>(null)
   const [isHeaderVisible, setIsHeaderVisible] = useState(true)
@@ -464,11 +464,13 @@ export default function InicioPage() {
           const cardId = entry.target.getAttribute('data-card-id')
           if (cardId) {
             if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-              setHoveredCard(cardId)
+              setHoveredCard((prev) => new Set([...Array.from(prev), cardId]))
             } else {
-              if (hoveredCard === cardId) {
-                setHoveredCard(null)
-              }
+              setHoveredCard((prev) => {
+                const newSet = new Set(prev)
+                newSet.delete(cardId)
+                return newSet
+              })
             }
           }
         })
@@ -490,7 +492,7 @@ export default function InicioPage() {
         }
       })
     }
-  }, [hoveredCard, isMobile])
+  }, [isMobile])
 
   return (
     <div className="min-h-screen bg-[#f2ede7] pt-16 md:pt-20">
@@ -1062,12 +1064,16 @@ export default function InicioPage() {
               className="relative overflow-hidden rounded-lg cursor-pointer"
               onHoverStart={() => {
                 if (!isMobile) {
-                  setHoveredCard('mulher')
+                  setHoveredCard((prev) => new Set([...Array.from(prev), 'mulher']))
                 }
               }}
               onHoverEnd={() => {
                 if (!isMobile) {
-                  setHoveredCard(null)
+                  setHoveredCard((prev) => {
+                    const newSet = new Set(prev)
+                    newSet.delete('mulher')
+                    return newSet
+                  })
                 }
               }}
               whileHover={!isMobile ? { scale: 1.05 } : {}}
@@ -1096,7 +1102,7 @@ export default function InicioPage() {
                     background: 'linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.3) 100%)',
                   }}
                   animate={{
-                    opacity: hoveredCard === 'mulher' ? 1 : 0,
+                    opacity: hoveredCard.has('mulher') ? 1 : 0,
                   }}
                   transition={{ duration: 0.3 }}
                 />
@@ -1106,11 +1112,11 @@ export default function InicioPage() {
                   className="absolute bottom-0 left-0 right-0 h-2 z-30"
                   style={{
                     background: '#f56428',
-                    boxShadow: hoveredCard === 'mulher' ? '0 -10px 30px rgba(245, 100, 40, 0.8)' : 'none',
+                    boxShadow: hoveredCard.has('mulher') ? '0 -10px 30px rgba(245, 100, 40, 0.8)' : 'none',
                   }}
                   animate={{
-                    opacity: hoveredCard === 'mulher' ? 1 : 0,
-                    height: hoveredCard === 'mulher' ? '8px' : '0px',
+                    opacity: hoveredCard.has('mulher') ? 1 : 0,
+                    height: hoveredCard.has('mulher') ? '8px' : '0px',
                   }}
                   transition={{ duration: 0.3 }}
                 />
@@ -1120,7 +1126,7 @@ export default function InicioPage() {
                   <motion.h3
                     className="font-jh-caudemars text-2xl md:text-3xl mb-4 text-center w-full"
                     animate={{
-                      y: hoveredCard === 'mulher' ? -20 : 0,
+                      y: hoveredCard.has('mulher') ? -20 : 0,
                     }}
                     transition={{ duration: 0.3 }}
                   >
@@ -1130,11 +1136,11 @@ export default function InicioPage() {
                   <motion.div
                     className="font-neue-montreal text-sm md:text-base"
                     animate={{
-                      opacity: hoveredCard === 'mulher' ? 1 : 0,
-                      y: hoveredCard === 'mulher' ? 0 : 20,
+                      opacity: hoveredCard.has('mulher') ? 1 : 0,
+                      y: hoveredCard.has('mulher') ? 0 : 20,
                     }}
                     transition={{ duration: 0.3 }}
-                    style={{ display: hoveredCard === 'mulher' ? 'block' : 'none' }}
+                    style={{ display: hoveredCard.has('mulher') ? 'block' : 'none' }}
                   >
                     <p>Depressão perinatal, ansiedade gestacional, POC perinatal, psicose pós-parto</p>
                   </motion.div>
@@ -1148,12 +1154,16 @@ export default function InicioPage() {
               className="relative overflow-hidden rounded-lg cursor-pointer"
               onHoverStart={() => {
                 if (!isMobile) {
-                  setHoveredCard('parental')
+                  setHoveredCard((prev) => new Set([...Array.from(prev), 'parental']))
                 }
               }}
               onHoverEnd={() => {
                 if (!isMobile) {
-                  setHoveredCard(null)
+                  setHoveredCard((prev) => {
+                    const newSet = new Set(prev)
+                    newSet.delete('parental')
+                    return newSet
+                  })
                 }
               }}
               whileHover={!isMobile ? { scale: 1.05 } : {}}
@@ -1180,7 +1190,7 @@ export default function InicioPage() {
                     background: 'linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.3) 100%)',
                   }}
                   animate={{
-                    opacity: hoveredCard === 'parental' ? 1 : 0,
+                    opacity: hoveredCard.has('parental') ? 1 : 0,
                   }}
                   transition={{ duration: 0.3 }}
                 />
@@ -1189,11 +1199,11 @@ export default function InicioPage() {
                   className="absolute bottom-0 left-0 right-0 h-2 z-30"
                   style={{
                     background: '#f56428',
-                    boxShadow: hoveredCard === 'parental' ? '0 -10px 30px rgba(245, 100, 40, 0.8)' : 'none',
+                    boxShadow: hoveredCard.has('parental') ? '0 -10px 30px rgba(245, 100, 40, 0.8)' : 'none',
                   }}
                   animate={{
-                    opacity: hoveredCard === 'parental' ? 1 : 0,
-                    height: hoveredCard === 'parental' ? '8px' : '0px',
+                    opacity: hoveredCard.has('parental') ? 1 : 0,
+                    height: hoveredCard.has('parental') ? '8px' : '0px',
                   }}
                   transition={{ duration: 0.3 }}
                 />
@@ -1202,7 +1212,7 @@ export default function InicioPage() {
                   <motion.h3
                     className="font-jh-caudemars text-2xl md:text-3xl mb-4 text-center w-full"
                     animate={{
-                      y: hoveredCard === 'parental' ? -20 : 0,
+                      y: hoveredCard.has('parental') ? -20 : 0,
                     }}
                     transition={{ duration: 0.3 }}
                   >
@@ -1212,11 +1222,11 @@ export default function InicioPage() {
                   <motion.div
                     className="font-neue-montreal text-sm md:text-base"
                     animate={{
-                      opacity: hoveredCard === 'parental' ? 1 : 0,
-                      y: hoveredCard === 'parental' ? 0 : 20,
+                      opacity: hoveredCard.has('parental') ? 1 : 0,
+                      y: hoveredCard.has('parental') ? 0 : 20,
                     }}
                     transition={{ duration: 0.3 }}
-                    style={{ display: hoveredCard === 'parental' ? 'block' : 'none' }}
+                    style={{ display: hoveredCard.has('parental') ? 'block' : 'none' }}
                   >
                     <p>Competências parentais, gestão de comportamentos, comunicação familiar</p>
                   </motion.div>
@@ -1230,12 +1240,16 @@ export default function InicioPage() {
               className="relative overflow-hidden rounded-lg cursor-pointer"
               onHoverStart={() => {
                 if (!isMobile) {
-                  setHoveredCard('perinatal')
+                  setHoveredCard((prev) => new Set([...Array.from(prev), 'perinatal']))
                 }
               }}
               onHoverEnd={() => {
                 if (!isMobile) {
-                  setHoveredCard(null)
+                  setHoveredCard((prev) => {
+                    const newSet = new Set(prev)
+                    newSet.delete('perinatal')
+                    return newSet
+                  })
                 }
               }}
               whileHover={!isMobile ? { scale: 1.05 } : {}}
@@ -1262,7 +1276,7 @@ export default function InicioPage() {
                     background: 'linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.3) 100%)',
                   }}
                   animate={{
-                    opacity: hoveredCard === 'perinatal' ? 1 : 0,
+                    opacity: hoveredCard.has('perinatal') ? 1 : 0,
                   }}
                   transition={{ duration: 0.3 }}
                 />
@@ -1271,11 +1285,11 @@ export default function InicioPage() {
                   className="absolute bottom-0 left-0 right-0 h-2 z-30"
                   style={{
                     background: '#f56428',
-                    boxShadow: hoveredCard === 'perinatal' ? '0 -10px 30px rgba(245, 100, 40, 0.8)' : 'none',
+                    boxShadow: hoveredCard.has('perinatal') ? '0 -10px 30px rgba(245, 100, 40, 0.8)' : 'none',
                   }}
                   animate={{
-                    opacity: hoveredCard === 'perinatal' ? 1 : 0,
-                    height: hoveredCard === 'perinatal' ? '8px' : '0px',
+                    opacity: hoveredCard.has('perinatal') ? 1 : 0,
+                    height: hoveredCard.has('perinatal') ? '8px' : '0px',
                   }}
                   transition={{ duration: 0.3 }}
                 />
@@ -1284,7 +1298,7 @@ export default function InicioPage() {
                   <motion.h3
                     className="font-jh-caudemars text-2xl md:text-3xl mb-4 text-center w-full"
                     animate={{
-                      y: hoveredCard === 'perinatal' ? -20 : 0,
+                      y: hoveredCard.has('perinatal') ? -20 : 0,
                     }}
                     transition={{ duration: 0.3 }}
                   >
@@ -1294,11 +1308,11 @@ export default function InicioPage() {
                   <motion.div
                     className="font-neue-montreal text-sm md:text-base"
                     animate={{
-                      opacity: hoveredCard === 'perinatal' ? 1 : 0,
-                      y: hoveredCard === 'perinatal' ? 0 : 20,
+                      opacity: hoveredCard.has('perinatal') ? 1 : 0,
+                      y: hoveredCard.has('perinatal') ? 0 : 20,
                     }}
                     transition={{ duration: 0.3 }}
-                    style={{ display: hoveredCard === 'perinatal' ? 'block' : 'none' }}
+                    style={{ display: hoveredCard.has('perinatal') ? 'block' : 'none' }}
                   >
                     <p>Disfunções sexuais, identidade de género, orientação sexual, disforia de género</p>
                   </motion.div>
@@ -1312,12 +1326,16 @@ export default function InicioPage() {
               className="relative overflow-hidden rounded-lg cursor-pointer"
               onHoverStart={() => {
                 if (!isMobile) {
-                  setHoveredCard('sexhuman')
+                  setHoveredCard((prev) => new Set([...Array.from(prev), 'sexhuman']))
                 }
               }}
               onHoverEnd={() => {
                 if (!isMobile) {
-                  setHoveredCard(null)
+                  setHoveredCard((prev) => {
+                    const newSet = new Set(prev)
+                    newSet.delete('sexhuman')
+                    return newSet
+                  })
                 }
               }}
               whileHover={!isMobile ? { scale: 1.05 } : {}}
@@ -1344,7 +1362,7 @@ export default function InicioPage() {
                     background: 'linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.3) 100%)',
                   }}
                   animate={{
-                    opacity: hoveredCard === 'sexhuman' ? 1 : 0,
+                    opacity: hoveredCard.has('sexhuman') ? 1 : 0,
                   }}
                   transition={{ duration: 0.3 }}
                 />
@@ -1353,11 +1371,11 @@ export default function InicioPage() {
                   className="absolute bottom-0 left-0 right-0 h-2 z-30"
                   style={{
                     background: '#f56428',
-                    boxShadow: hoveredCard === 'sexhuman' ? '0 -10px 30px rgba(245, 100, 40, 0.8)' : 'none',
+                    boxShadow: hoveredCard.has('sexhuman') ? '0 -10px 30px rgba(245, 100, 40, 0.8)' : 'none',
                   }}
                   animate={{
-                    opacity: hoveredCard === 'sexhuman' ? 1 : 0,
-                    height: hoveredCard === 'sexhuman' ? '8px' : '0px',
+                    opacity: hoveredCard.has('sexhuman') ? 1 : 0,
+                    height: hoveredCard.has('sexhuman') ? '8px' : '0px',
                   }}
                   transition={{ duration: 0.3 }}
                 />
@@ -1366,7 +1384,7 @@ export default function InicioPage() {
                   <motion.h3
                     className="font-jh-caudemars text-2xl md:text-3xl mb-4 text-center w-full"
                     animate={{
-                      y: hoveredCard === 'sexhuman' ? -20 : 0,
+                      y: hoveredCard.has('sexhuman') ? -20 : 0,
                     }}
                     transition={{ duration: 0.3 }}
                   >
@@ -1376,11 +1394,11 @@ export default function InicioPage() {
                   <motion.div
                     className="font-neue-montreal text-sm md:text-base"
                     animate={{
-                      opacity: hoveredCard === 'sexhuman' ? 1 : 0,
-                      y: hoveredCard === 'sexhuman' ? 0 : 20,
+                      opacity: hoveredCard.has('sexhuman') ? 1 : 0,
+                      y: hoveredCard.has('sexhuman') ? 0 : 20,
                     }}
                     transition={{ duration: 0.3 }}
-                    style={{ display: hoveredCard === 'sexhuman' ? 'block' : 'none' }}
+                    style={{ display: hoveredCard.has('sexhuman') ? 'block' : 'none' }}
                   >
                     <p>Disfunções sexuais, identidade de género, orientação sexual, disforia de género</p>
                   </motion.div>
