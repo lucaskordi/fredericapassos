@@ -102,7 +102,7 @@ const chreed = localFont({
 
 export const metadata: Metadata = {
   title: 'Frederica Passos',
-  description: 'Projeto Next.js com Tailwind CSS',
+  description: 'Psiquiatria Contemporânea para Mentes que não Cabem em Rótulos.',
   icons: {
     icon: '/circleorange.svg',
   },

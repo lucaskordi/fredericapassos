@@ -31,6 +31,7 @@ export default function InicioPage() {
   const [isTyping, setIsTyping] = useState(true)
   const [hoveredRecurso, setHoveredRecurso] = useState<string | null>(null)
   const [openRecurso, setOpenRecurso] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
@@ -310,6 +311,15 @@ export default function InicioPage() {
   }, [])
 
   useEffect(() => {
+    setIsMobile(window.innerWidth < 640)
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -439,7 +449,7 @@ export default function InicioPage() {
   }, [openRecurso])
 
   useEffect(() => {
-    if (window.innerWidth >= 640) return
+    if (!isMobile) return
 
     const cards = [
       { ref: mulherCardRef, id: 'mulher' },
@@ -480,7 +490,7 @@ export default function InicioPage() {
         }
       })
     }
-  }, [hoveredCard])
+  }, [hoveredCard, isMobile])
 
   return (
     <div className="min-h-screen bg-[#f2ede7] pt-16 md:pt-20">
@@ -790,8 +800,8 @@ export default function InicioPage() {
                     className="absolute inset-0"
                     style={{
                       backgroundImage: 'url(/srosa.svg)',
-                      backgroundSize: window.innerWidth < 640 ? '200%' : 'clamp(35%, 50vw, 60%)',
-                      backgroundPosition: window.innerWidth < 640 ? 'center center' : '5% center',
+                      backgroundSize: isMobile ? '200%' : 'clamp(35%, 50vw, 60%)',
+                      backgroundPosition: isMobile ? 'center center' : '5% center',
                       backgroundRepeat: 'no-repeat',
                       opacity: 1,
                       x: parallaxX,
@@ -1051,16 +1061,16 @@ export default function InicioPage() {
               ref={mulherCardRef}
               className="relative overflow-hidden rounded-lg cursor-pointer"
               onHoverStart={() => {
-                if (window.innerWidth >= 640) {
+                if (!isMobile) {
                   setHoveredCard('mulher')
                 }
               }}
               onHoverEnd={() => {
-                if (window.innerWidth >= 640) {
+                if (!isMobile) {
                   setHoveredCard(null)
                 }
               }}
-              whileHover={window.innerWidth >= 640 ? { scale: 1.05 } : {}}
+              whileHover={!isMobile ? { scale: 1.05 } : {}}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
               <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px]">
@@ -1137,16 +1147,16 @@ export default function InicioPage() {
               ref={parentalCardRef}
               className="relative overflow-hidden rounded-lg cursor-pointer"
               onHoverStart={() => {
-                if (window.innerWidth >= 640) {
+                if (!isMobile) {
                   setHoveredCard('parental')
                 }
               }}
               onHoverEnd={() => {
-                if (window.innerWidth >= 640) {
+                if (!isMobile) {
                   setHoveredCard(null)
                 }
               }}
-              whileHover={window.innerWidth >= 640 ? { scale: 1.05 } : {}}
+              whileHover={!isMobile ? { scale: 1.05 } : {}}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
               <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px]">
@@ -1219,16 +1229,16 @@ export default function InicioPage() {
               ref={perinatalCardRef}
               className="relative overflow-hidden rounded-lg cursor-pointer"
               onHoverStart={() => {
-                if (window.innerWidth >= 640) {
+                if (!isMobile) {
                   setHoveredCard('perinatal')
                 }
               }}
               onHoverEnd={() => {
-                if (window.innerWidth >= 640) {
+                if (!isMobile) {
                   setHoveredCard(null)
                 }
               }}
-              whileHover={window.innerWidth >= 640 ? { scale: 1.05 } : {}}
+              whileHover={!isMobile ? { scale: 1.05 } : {}}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
               <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px]">
@@ -1301,16 +1311,16 @@ export default function InicioPage() {
               ref={sexhumanCardRef}
               className="relative overflow-hidden rounded-lg cursor-pointer"
               onHoverStart={() => {
-                if (window.innerWidth >= 640) {
+                if (!isMobile) {
                   setHoveredCard('sexhuman')
                 }
               }}
               onHoverEnd={() => {
-                if (window.innerWidth >= 640) {
+                if (!isMobile) {
                   setHoveredCard(null)
                 }
               }}
-              whileHover={window.innerWidth >= 640 ? { scale: 1.05 } : {}}
+              whileHover={!isMobile ? { scale: 1.05 } : {}}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
             >
               <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px]">
@@ -1841,7 +1851,7 @@ export default function InicioPage() {
             <motion.div
               className="absolute inset-0 flex items-center justify-center pointer-events-none"
               initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: window.innerWidth < 640 ? 1.5 : 0.8, opacity: 0.6 }}
+              animate={{ scale: isMobile ? 1.5 : 0.8, opacity: 0.6 }}
               exit={{ scale: 0, opacity: 0 }}
               transition={{ 
                 type: "spring",
@@ -1887,17 +1897,17 @@ export default function InicioPage() {
                 <div
                   className="absolute inset-0 z-20 cursor-pointer sm:cursor-pointer"
                   onMouseEnter={() => {
-                    if (window.innerWidth >= 640) {
+                    if (!isMobile) {
                       setHoveredRecurso('ebook')
                     }
                   }}
                   onMouseLeave={() => {
-                    if (window.innerWidth >= 640) {
+                    if (!isMobile) {
                       setHoveredRecurso(null)
                     }
                   }}
                   onClick={() => {
-                    if (window.innerWidth < 640) {
+                    if (isMobile) {
                       if (openRecurso === 'ebook') {
                         setOpenRecurso(null)
                         setHoveredRecurso(null)
@@ -1974,17 +1984,17 @@ export default function InicioPage() {
                 <div
                   className="absolute inset-0 z-20 cursor-pointer sm:cursor-pointer"
                   onMouseEnter={() => {
-                    if (window.innerWidth >= 640) {
+                    if (!isMobile) {
                       setHoveredRecurso('artigos')
                     }
                   }}
                   onMouseLeave={() => {
-                    if (window.innerWidth >= 640) {
+                    if (!isMobile) {
                       setHoveredRecurso(null)
                     }
                   }}
                   onClick={() => {
-                    if (window.innerWidth < 640) {
+                    if (isMobile) {
                       if (openRecurso === 'artigos') {
                         setOpenRecurso(null)
                         setHoveredRecurso(null)
@@ -2061,17 +2071,17 @@ export default function InicioPage() {
                 <div
                   className="absolute inset-0 z-20 cursor-pointer sm:cursor-pointer"
                   onMouseEnter={() => {
-                    if (window.innerWidth >= 640) {
+                    if (!isMobile) {
                       setHoveredRecurso('videos')
                     }
                   }}
                   onMouseLeave={() => {
-                    if (window.innerWidth >= 640) {
+                    if (!isMobile) {
                       setHoveredRecurso(null)
                     }
                   }}
                   onClick={() => {
-                    if (window.innerWidth < 640) {
+                    if (isMobile) {
                       if (openRecurso === 'videos') {
                         setOpenRecurso(null)
                         setHoveredRecurso(null)
@@ -2188,7 +2198,7 @@ export default function InicioPage() {
         className="w-full bg-[#f2ede7] py-12 sm:py-16 md:py-24"
         style={{
           backgroundImage: 'url(/srosa.svg)',
-          backgroundSize: window.innerWidth < 640 ? '250%' : '70%',
+          backgroundSize: isMobile ? '250%' : '70%',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
         }}
@@ -2360,7 +2370,7 @@ export default function InicioPage() {
           className="absolute inset-0 opacity-100"
           style={{
             backgroundImage: 'url(/fundo2.svg)',
-            backgroundSize: window.innerWidth < 640 ? '400%' : '200%',
+            backgroundSize: isMobile ? '400%' : '200%',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat'
           }}
